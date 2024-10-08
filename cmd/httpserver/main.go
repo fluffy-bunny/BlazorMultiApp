@@ -9,6 +9,13 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/rs/xid"
+)
+
+var (
+	indexRoot string
+	indexApp1 string
+	indexApp2 string
 )
 
 func noCacheMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
@@ -25,65 +32,62 @@ func noCacheMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
-func serveIndexHandler(rootPath string) echo.HandlerFunc {
+func serveIndexFromMemory(content string) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		indexPath := rootPath + "/index.html"
-		if _, err := os.Stat(indexPath); os.IsNotExist(err) {
-			return c.String(http.StatusNotFound, "Index file not found")
-		}
-		return c.File(indexPath)
+		return c.HTML(http.StatusOK, content)
 	}
 }
-func serveModifiedIndexHandler(modifiedContent string) echo.HandlerFunc {
+
+func createAppHandler(staticMiddleware echo.MiddlewareFunc, indexContent string) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		return c.HTML(http.StatusOK, modifiedContent)
-	}
-}
-func createAppHandler(staticMiddleware echo.MiddlewareFunc, rootPath string) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		if err := staticMiddleware(func(c echo.Context) error {
-			return nil
-		})(c); err == nil {
-			return nil
+		path := c.Request().URL.Path
+		if strings.Contains(path, ".") {
+			// This is likely a file request, try to serve it statically
+			err := staticMiddleware(func(c echo.Context) error {
+				return nil
+			})(c)
+			if err == nil {
+				return nil // File was found and served
+			}
 		}
-		return serveIndexHandler(rootPath)(c)
+		// If it's not a file or the file wasn't found, serve the index
+		return c.HTML(http.StatusOK, indexContent)
 	}
 }
 
 func main() {
 	port := flag.String("port", "9044", "Port to listen on")
 	flag.Parse()
-	/*
-		guid := xid.New().String()
 
-		indexApp1, err := os.ReadFile("static/app1/wwwroot/index_template.html")
-		if err != nil {
-			panic(err)
-		}
-		indexApp2, err := os.ReadFile("static/app2/wwwroot/index_template.html")
-		if err != nil {
-			panic(err)
-		}
+	guid := xid.New().String()
 
-		// Convert the content to a string
-		contentStr := string(indexApp1)
+	// Load index files into memory
+	indexRootContent, err := os.ReadFile("static/index_template.html")
+	if err != nil {
+		panic(err)
+	}
+	indexApp1Content, err := os.ReadFile("static/app1/wwwroot/index_template.html")
+	if err != nil {
+		panic(err)
+	}
+	indexApp2Content, err := os.ReadFile("static/app2/wwwroot/index_template.html")
+	if err != nil {
+		panic(err)
+	}
 
-		// Replace all instances of {version} with "guid"
-		modifiedApp1 := strings.ReplaceAll(contentStr, "{version}", guid)
-		// Convert the content to a string
-		contentStr = string(indexApp2)
+	// Replace {version} with guid in all index files
+	indexRoot = strings.ReplaceAll(string(indexRootContent), "{version}", guid)
+	indexApp1 = strings.ReplaceAll(string(indexApp1Content), "{version}", guid)
+	indexApp2 = strings.ReplaceAll(string(indexApp2Content), "{version}", guid)
 
-		// Replace all instances of {version} with "guid"
-		modifiedApp2 := strings.ReplaceAll(contentStr, "{version}", guid)
-	*/
 	e := echo.New()
 
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Use(noCacheMiddleware)
 
-	// Serve root index.html
-	e.GET("/", serveIndexHandler("static"))
+	// Serve root index.html from memory
+	e.GET("/", serveIndexFromMemory(indexRoot))
 
 	// Serve static files and handle routing for app1
 	app1Static := middleware.StaticWithConfig(middleware.StaticConfig{
@@ -91,8 +95,10 @@ func main() {
 		HTML5:  true,
 		Browse: false,
 	})
-	e.GET("/app1", serveIndexHandler("static/app1/wwwroot"))
-	e.GET("/app1/*", createAppHandler(app1Static, "static/app1/wwwroot"))
+	e.GET("/app1", func(c echo.Context) error {
+		return c.HTML(http.StatusOK, indexApp1)
+	})
+	e.GET("/app1/*", createAppHandler(app1Static, indexApp1))
 
 	// Serve static files and handle routing for app2
 	app2Static := middleware.StaticWithConfig(middleware.StaticConfig{
@@ -100,8 +106,10 @@ func main() {
 		HTML5:  true,
 		Browse: false,
 	})
-	e.GET("/app2", serveIndexHandler("static/app2/wwwroot"))
-	e.GET("/app2/*", createAppHandler(app2Static, "static/app2/wwwroot"))
+	e.GET("/app2", func(c echo.Context) error {
+		return c.HTML(http.StatusOK, indexApp2)
+	})
+	e.GET("/app2/*", createAppHandler(app2Static, indexApp2))
 
 	// Serve other static files from the root static folder
 	e.Static("/", "static")
