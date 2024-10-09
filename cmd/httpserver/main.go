@@ -95,9 +95,7 @@ func main() {
 		HTML5:  true,
 		Browse: false,
 	})
-	e.GET("/app1", func(c echo.Context) error {
-		return c.HTML(http.StatusOK, indexApp1)
-	})
+
 	e.GET("/app1/*", createAppHandler(app1Static, indexApp1))
 
 	// Serve static files and handle routing for app2
@@ -106,9 +104,7 @@ func main() {
 		HTML5:  true,
 		Browse: false,
 	})
-	e.GET("/app2", func(c echo.Context) error {
-		return c.HTML(http.StatusOK, indexApp2)
-	})
+
 	e.GET("/app2/*", createAppHandler(app2Static, indexApp2))
 
 	// Serve other static files from the root static folder
