@@ -58,7 +58,7 @@ func createAppHandler(staticMiddleware echo.MiddlewareFunc, indexContent string,
 }
 
 func main() {
-	port := flag.String("port", "9044", "Port to listen on")
+	port := flag.String("port", "9099", "Port to listen on")
 	flag.Parse()
 
 	guid := xid.New().String()
