@@ -38,21 +38,23 @@ func serveIndexFromMemory(content string) echo.HandlerFunc {
 	}
 }
 
-func createAppHandler(staticMiddleware echo.MiddlewareFunc, indexContent string) echo.HandlerFunc {
+func createAppHandler(staticMiddleware echo.MiddlewareFunc, indexContent string, rootPath string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		path := c.Request().URL.Path
-		if strings.Contains(path, ".") {
-			// This is likely a file request, try to serve it statically
-			err := staticMiddleware(func(c echo.Context) error {
-				return nil
-			})(c)
-			if err == nil {
-				return nil // File was found and served
-			}
+		if path == rootPath {
+			return c.HTML(http.StatusOK, indexContent)
 		}
-		// If it's not a file or the file wasn't found, serve the index
-		return c.HTML(http.StatusOK, indexContent)
+
+		// This is likely a file request, try to serve it statically
+		err := staticMiddleware(func(c echo.Context) error {
+			return nil
+		})(c)
+		if err == nil {
+			return nil // File was found and served
+		}
+		return c.NoContent(http.StatusNotFound)
 	}
+
 }
 
 func main() {
@@ -96,7 +98,7 @@ func main() {
 		Browse: false,
 	})
 
-	e.GET("/app1/*", createAppHandler(app1Static, indexApp1))
+	e.GET("/app1/*", createAppHandler(app1Static, indexApp1, "/app1/"))
 
 	// Serve static files and handle routing for app2
 	app2Static := middleware.StaticWithConfig(middleware.StaticConfig{
@@ -105,7 +107,7 @@ func main() {
 		Browse: false,
 	})
 
-	e.GET("/app2/*", createAppHandler(app2Static, indexApp2))
+	e.GET("/app2/*", createAppHandler(app2Static, indexApp2, "/app2/"))
 
 	// Serve other static files from the root static folder
 	e.Static("/", "static")
