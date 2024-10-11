@@ -98,6 +98,17 @@ jobs:
         name: static-files-${{needs.pre_flight.outputs.new_tag}}
         path: ./cmd/httpserver/static
         if-no-files-found: error
+        
+    - name: Download Artifact
+      if: github.ref == 'refs/heads/main'
+      uses: actions/download-artifact@v3
+      with:
+        name: static-files-${{needs.pre_flight.outputs.new_tag}}
+        path: ./static-files
+
+    - name: Zip Static Files
+      if: github.ref == 'refs/heads/main'
+      run: zip -r static-files.zip ./static-files
 
     - name: Create Release
       if: github.ref == 'refs/heads/main'
@@ -107,6 +118,7 @@ jobs:
         gh release create ${{needs.pre_flight.outputs.new_tag}} \
           --title "Release ${{needs.pre_flight.outputs.new_tag}}" \
           --notes "${{needs.pre_flight.outputs.changelog}}" \
-          --repo ${{ github.repository }}
+          --repo ${{ github.repository }} \
+          static-files.zip
         
-        echo "Release ${{needs.pre_flight.outputs.new_tag}} created successfully"
+        echo "Release ${{needs.pre_flight.outputs.new_tag}} created successfully with attached artifacts"
