@@ -56,3 +56,10 @@ jobs:
     
     - name: Test
       run: dotnet test --no-build --verbosity normal
+
+    - name: Upload Static Files
+      uses: actions/upload-artifact@v3
+      with:
+        name: static-files
+        path: ./cmd/httpserver/static
+        if-no-files-found: error
