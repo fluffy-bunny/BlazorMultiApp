@@ -2,9 +2,11 @@ name: .NET and Go Build
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - '**'  # This will run on pushes to any branch
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - '**'  # This will run on pull requests to any branch
 
 jobs:
   build:
@@ -20,7 +22,7 @@ jobs:
     - name: Setup Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.23'  # Adjust this to your Go version
+        go-version: '1.21'  # Adjust this to your Go version
     
     - name: Build and Publish BlazorApp1
       run: |
@@ -56,7 +58,7 @@ jobs:
     
     - name: Test
       run: dotnet test --no-build --verbosity normal
-
+    
     - name: Upload Static Files
       uses: actions/upload-artifact@v3
       with:
