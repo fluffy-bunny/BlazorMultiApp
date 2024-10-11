@@ -86,13 +86,11 @@ jobs:
         git config user.email github-actions@github.com
         git tag $new_tag
         
-        # Create a ZIP file of the static files
-        zip -r static-files.zip ./cmd/httpserver/static
-        
-        # Create a release
+        # Create a release using the existing artifact
         gh release create $new_tag \
           --title "Release $new_tag" \
           --notes "Automated release for commit ${{ github.sha }}" \
-          static-files.zip
+          --repo ${{ github.repository }} \
+          "${{ steps.upload-artifact.outputs.artifact-path }}#static-files"
         
         echo "Release $new_tag created successfully"
