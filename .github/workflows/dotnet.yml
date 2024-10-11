@@ -56,7 +56,41 @@ jobs:
       with:
         go-version: "^${{ env.GO_VERSION }}"
     
-    # ... [rest of the build steps remain the same] ...
+    - name: Build and Publish BlazorApp1
+      run: |
+        cd BlazorApp1
+        dotnet publish -c Release -o ./publish
+        cd ..
+    
+    - name: Process BlazorApp1 Output
+      run: |
+        rm -rf ./cmd/httpserver/static/app1/wwwroot
+        cp -r ./BlazorApp1/publish/wwwroot ./cmd/httpserver/static/app1/wwwroot
+        mv ./cmd/httpserver/static/app1/wwwroot/index.html ./cmd/httpserver/static/app1/wwwroot/index_template.html
+        sed -i 's#<base href="/" />#<base href="/app1/" />#' ./cmd/httpserver/static/app1/wwwroot/index_template.html
+    
+    - name: Build and Publish BlazorApp2
+      run: |
+        cd BlazorApp2
+        dotnet publish -c Release -o ./publish
+        cd ..
+    
+    - name: Process BlazorApp2 Output
+      run: |
+        rm -rf ./cmd/httpserver/static/app2/wwwroot
+        cp -r ./BlazorApp2/publish/wwwroot ./cmd/httpserver/static/app2/wwwroot
+        mv ./cmd/httpserver/static/app2/wwwroot/index.html ./cmd/httpserver/static/app2/wwwroot/index_template.html
+        sed -i 's#<base href="/" />#<base href="/app2/" />#' ./cmd/httpserver/static/app2/wwwroot/index_template.html
+    
+    - name: Build Go Server
+      run: |
+        cd ./cmd/httpserver/
+        go build .
+        cd ../..
+    
+    - name: Test
+      run: dotnet test --no-build --verbosity normal
+    
 
     - name: Upload Static Files
       uses: actions/upload-artifact@v3
